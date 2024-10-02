@@ -173,42 +173,45 @@ func main() {
 	go todoList.AutoSave(filename, 10*time.Second, done)
 
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Println("Enhanced To-Do Application with Auto-Save")
-	fmt.Println("----------------------------")
+	fmt.Println("Welcome to the Enhanced To-Do Application with Auto-Save!")
+	fmt.Println("----------------------------------------------------------")
 
 	for {
-		// Display menu
-		fmt.Println("\nMenu:")
-		fmt.Println("1. Create To-Do")
-		fmt.Println("2. List To-Dos")
-		fmt.Println("3. Update To-Do")
-		fmt.Println("4. Delete To-Do")
-		fmt.Println("5. Exit")
-		fmt.Print("Enter your choice: ")
+		fmt.Println("\n🔷 MAIN MENU")
+		fmt.Println("1️⃣  ➡  Create a New To-Do")
+		fmt.Println("2️⃣  ➡  View All To-Dos")
+		fmt.Println("3️⃣  ➡  Update an Existing To-Do")
+		fmt.Println("4️⃣  ➡  Delete a To-Do")
+		fmt.Println("5️⃣  ➡  Exit")
+		fmt.Print("Please enter your choice (1-5): ")
 
 		choice, _ := reader.ReadString('\n')
 		choice = strings.TrimSpace(choice)
 
 		switch choice {
 		case "1":
+			fmt.Println("\n📝 CREATE A NEW TO-DO")
 			fmt.Print("Enter the title of the new to-do: ")
 			title, _ := reader.ReadString('\n')
 			title = strings.TrimSpace(title)
 			if title == "" {
-				fmt.Println("Title cannot be empty.")
+				fmt.Println("⚠️ Title cannot be empty. Please try again.")
 			} else {
 				todoList.CreateTodo(title)
+				fmt.Println("✅ To-Do created successfully!")
 			}
 		case "2":
+			fmt.Println("\n📋 VIEW ALL TO-DOS")
 			todoList.ListTodos()
 		case "3":
+			fmt.Println("\n✏️ UPDATE A TO-DO")
 			fmt.Print("Enter the ID of the to-do to update: ")
 			idStr, _ := reader.ReadString('\n')
 			idStr = strings.TrimSpace(idStr)
 			var id int
 			_, err := fmt.Sscan(idStr, &id)
 			if err != nil {
-				fmt.Println("Invalid ID. Please enter a numeric value.")
+				fmt.Println("⚠️ Invalid ID. Please enter a numeric value.")
 				continue
 			}
 
@@ -222,23 +225,26 @@ func main() {
 			completed := strings.ToLower(completedStr) == "yes"
 
 			todoList.UpdateTodo(id, newTitle, completed)
+			fmt.Println("✅ To-Do updated successfully!")
 		case "4":
+			fmt.Println("\n🗑️ DELETE A TO-DO")
 			fmt.Print("Enter the ID of the to-do to delete: ")
 			idStr, _ := reader.ReadString('\n')
 			idStr = strings.TrimSpace(idStr)
 			var id int
 			_, err := fmt.Sscan(idStr, &id)
 			if err != nil {
-				fmt.Println("Invalid ID. Please enter a numeric value.")
+				fmt.Println("⚠️ Invalid ID. Please enter a numeric value.")
 				continue
 			}
 			todoList.DeleteTodo(id)
+			fmt.Println("✅ To-Do deleted successfully!")
 		case "5":
-			fmt.Println("Exiting...")
+			fmt.Println("\n👋 Exiting the application... Goodbye!")
 			done <- true // Signal the goroutine to stop auto-saving
 			return
 		default:
-			fmt.Println("Invalid choice. Please try again.")
+			fmt.Println("⚠️ Invalid choice. Please enter a valid option (1-5).")
 		}
 	}
 }
