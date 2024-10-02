@@ -23,6 +23,7 @@ type TodoList struct {
 	todos     []Todo
 	idCounter int
 	mu        sync.Mutex
+	changed   bool // Flag to track if any changes have been made
 }
 
 // CreateTodo adds a new todo to the list.
@@ -37,6 +38,7 @@ func (t *TodoList) CreateTodo(title string) {
 		CreatedAt: time.Now(),
 	}
 	t.todos = append(t.todos, newTodo)
+	t.changed = true
 	fmt.Println("To-Do added successfully.")
 }
 
@@ -68,6 +70,7 @@ func (t *TodoList) UpdateTodo(id int, newTitle string, completed bool) {
 				t.todos[i].Title = newTitle
 			}
 			t.todos[i].Completed = completed
+			t.changed = true
 			fmt.Println("To-Do updated successfully.")
 			return
 		}
@@ -82,6 +85,7 @@ func (t *TodoList) DeleteTodo(id int) {
 	for i, todo := range t.todos {
 		if todo.ID == id {
 			t.todos = append(t.todos[:i], t.todos[i+1:]...)
+			t.changed = true
 			fmt.Println("To-Do deleted successfully.")
 			return
 		}
@@ -105,6 +109,7 @@ func (t *TodoList) SaveToFile(filename string) error {
 		return err
 	}
 	fmt.Println("To-Do list saved to file.")
+	t.changed = false // Reset the changed flag after saving
 	return nil
 }
 
@@ -127,18 +132,28 @@ func (t *TodoList) LoadFromFile(filename string) error {
 	return nil
 }
 
-// AutoSave periodically saves the todos to a file every 10 seconds using goroutines.
-func (t *TodoList) AutoSave(filename string, interval time.Duration) {
+// AutoSave periodically saves the todos to a file if there are changes.
+func (t *TodoList) AutoSave(filename string, interval time.Duration, done chan bool) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			err := t.SaveToFile(filename)
-			if err != nil {
-				fmt.Println("Error saving file:", err)
+			// Only save if there are changes
+			t.mu.Lock()
+			shouldSave := t.changed
+			t.mu.Unlock()
+
+			if shouldSave {
+				err := t.SaveToFile(filename)
+				if err != nil {
+					fmt.Println("Error saving file:", err)
+				}
 			}
+		case <-done:
+			fmt.Println("Auto-save stopped.")
+			return
 		}
 	}
 }
@@ -154,7 +169,8 @@ func main() {
 	}
 
 	// Start auto-saving in a separate goroutine
-	go todoList.AutoSave(filename, 10*time.Second)
+	done := make(chan bool)
+	go todoList.AutoSave(filename, 10*time.Second, done)
 
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Enhanced To-Do Application with Auto-Save")
@@ -219,6 +235,7 @@ func main() {
 			todoList.DeleteTodo(id)
 		case "5":
 			fmt.Println("Exiting...")
+			done <- true // Signal the goroutine to stop auto-saving
 			return
 		default:
 			fmt.Println("Invalid choice. Please try again.")
