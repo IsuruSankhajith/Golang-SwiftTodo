@@ -46,7 +46,7 @@ func (t *TodoList) CreateTodo(title string) {
 func (t *TodoList) ListTodos() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if len(t.todos) == 0 {
+	if (len(t.todos)) == 0 {
 		fmt.Println("No To-Dos found.")
 		return
 	}
@@ -133,7 +133,8 @@ func (t *TodoList) LoadFromFile(filename string) error {
 }
 
 // AutoSave periodically saves the todos to a file if there are changes.
-func (t *TodoList) AutoSave(filename string, interval time.Duration, done chan bool) {
+func (t *TodoList) AutoSave(filename string, interval time.Duration, done chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -168,9 +169,13 @@ func main() {
 		fmt.Println("Error loading file:", err)
 	}
 
+	// WaitGroup to wait for auto-save to finish
+	var wg sync.WaitGroup
+
 	// Start auto-saving in a separate goroutine
 	done := make(chan bool)
-	go todoList.AutoSave(filename, 10*time.Second, done)
+	wg.Add(1)
+	go todoList.AutoSave(filename, 10*time.Second, done, &wg)
 
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Welcome to the Enhanced To-Do Application with Auto-Save!")
@@ -242,6 +247,8 @@ func main() {
 		case "5":
 			fmt.Println("\n👋 Exiting the application... Goodbye!")
 			done <- true // Signal the goroutine to stop auto-saving
+			close(done)  // Close the channel
+			wg.Wait()    // Wait for the auto-save goroutine to finish
 			return
 		default:
 			fmt.Println("⚠️ Invalid choice. Please enter a valid option (1-5).")
